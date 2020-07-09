@@ -78,7 +78,7 @@ class Translate extends MythBase {
 
     // No translation for this string?
         if (!isset($this->translations[$str]) && !(int)($str) && $str != '0')
-            return "!!NoTrans: $str!!";
+            return $str;//"!!NoTrans: $str!!";
 
     // Parse out anything passed in as an array (usually from tn())
         $args = array();
