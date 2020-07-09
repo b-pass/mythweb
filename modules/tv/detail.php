@@ -44,6 +44,26 @@
         $_SESSION['recording_details']['show_WillRecord']        = $_POST['WillRecord'];
     }
 
+// RecGroup -- only available for javascript templates
+    if (isset($_REQUEST['set_recgroup']) && $_GET['chanid'] && $_GET['starttime']) {
+        $sh = $db->query('UPDATE recorded
+                             SET recgroup = ?
+                           WHERE chanid = ? AND starttime = FROM_UNIXTIME(?)',
+                         $_REQUEST['set_recgroup'],
+                         $_GET['chanid'],
+                         $_GET['starttime']);
+    // Report back, and then exit.
+        if ($sh->affected_rows())
+            echo 'success';
+        else
+            echo "Failed to update the database for chanid {$_GET['chanid']} at {$_GET['starttime']}!";
+
+       if (intval($_GET['recordid']) == 0)
+            $_GET['recordid'] = $db->query_col("SELECT recordedid FROM recorded WHERE chanid = ? AND starttime = FROM_UNIXTIME(?) LIMIT 1", $_GET['chanid'], $_GET['starttime']);
+        MythBackend::find()->sendCommand(array('MESSAGE', 'MASTER_UPDATE_REC_INFO '.$_GET['recordid']));
+        exit;
+    }
+
 // Auto-expire -- only available for javascript templates
     if (isset($_REQUEST['toggle_autoexpire']) && $_GET['chanid'] && $_GET['starttime']) {
         $sh = $db->query('UPDATE recorded
@@ -83,6 +103,12 @@
         if (empty($program) || !$program->recstartts)
             $program =& load_one_program($_GET['starttime'], $_GET['chanid'], $_GET['manualid']);
     }
+
+    if ($program && !$program->rating) {
+        #$program->rating = "wtf  $program->chanid, $program->starttime";
+        list($program->rater, $program->rating) = 
+            $db->query_row("SELECT system, rating FROM ".($_GET['starttime'] < time() ? "recordedrating" : "programrating")." WHERE chanid = ? AND starttime = FROM_UNIXTIME(?) LIMIT 1", $program->chanid, $program->starttime);
+   }
 
 // Get the schedule for this recording, if one exists
     if ($program->recordid)

@@ -17,30 +17,9 @@
 
 // Print the page header
     require 'modules/_shared/tmpl/'.tmpl.'/header.php';
-?>
-<table id="backend_logs" sortable="true">
-    <thead>
-        <tr class="header">
-            <th>row</th>
-            <?php
-                foreach (array_keys($Logs[0]) as $key)
-                    echo "<th>$key</th>\n";
-            ?>
-        </tr>
-    </thead>
-    <?php
-        foreach ($Logs as $i => $log) {
-            echo '<tr class="',
-                 ($i % 2 ? 'even' : 'odd'),
-                 "\">\n  <td>$i</td>\n";
-            foreach ($log as $col) {
-                echo "  <td>$col</td>\n";
-            }
-            echo '</tr>';
-        }
-    ?>
-</table>
 
-<?php
+echo "<pre>\n";
+readfile("/var/log/mythtv/mythbackend.log");
+echo "\n</pre>\n";
 // Print the page footer
     require 'modules/_shared/tmpl/'.tmpl.'/footer.php';

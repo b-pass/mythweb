@@ -306,6 +306,10 @@
                               echo ' (', $program->seriesid, ')' ?></td>
         </tr><?php
             }
+        ?><tr class="x-extras">
+            <th><?php echo t('Rating') ?>:</th>
+            <td><?php echo $program->rating; #.($program->rater ? (" (" . $program->rater . ")") : ""); ?></td>
+        </tr><?php
             if (strlen($program->syndicatedepisodenumber) > 0) {
         ?><tr class="x-extras">
             <th><?php echo t('Episode Number') ?>:</th>
@@ -842,7 +846,7 @@
             }
             echo '            </ul>';
         }
-        if (count($program->jobs['queue'])) {
+        if (is_array($program->jobs['queue']) && count($program->jobs['queue'])) {
             echo t('Queued jobs'), ':',
                  '            <ul class="-queued">';
             foreach ($program->jobs['queue'] as $job) {
