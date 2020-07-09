@@ -306,6 +306,10 @@
                               echo ' (', $program->seriesid, ')' ?></td>
         </tr><?php
             }
+        ?><tr class="x-extras">
+            <th><?php echo t('Rating') ?>:</th>
+            <td><?php echo $program->rating; #.($program->rater ? (" (" . $program->rater . ")") : ""); ?></td>
+        </tr><?php
             if (strlen($program->syndicatedepisodenumber) > 0) {
         ?><tr class="x-extras">
             <th><?php echo t('Episode Number') ?>:</th>
