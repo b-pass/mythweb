@@ -638,21 +638,25 @@ class Program extends MythBase {
  **/
     public function rec_never_record() {
         global $db;
-        $sh = $db->query('REPLACE INTO oldrecorded (chanid,starttime,endtime,title,subtitle,description,category,seriesid,programid,recordid,station,rectype,recstatus,duplicate) VALUES ('
+        $sh = $db->query('REPLACE INTO oldrecorded (chanid,starttime,endtime,title,subtitle,description,season,episode,category,seriesid,programid,inetref,recordid,station,rectype,recstatus,duplicate,generic) VALUES ('
                                 .escape($this->chanid)                    .','
                                 .'NOW()'                                  .','
                                 .'NOW()'                                  .','
                                 .escape($this->title)                     .','
                                 .escape($this->subtitle)                  .','
                                 .escape($this->description)               .','
+                                .escape(isset($this->season) ? $this->season : 0) .','
+                                .escape(isset($this->episode) ? $this->episode : 0) .','
                                 .escape($this->category)                  .','
                                 .escape($this->seriesid)                  .','
                                 .escape($this->programid)                 .','
+                                .escape(isset($this->inetref) ? $this->inetref : '') .','
                                 .escape(isset($this->recordid) ? $this->recordid : 0)                  .','
                                 .escape($this->channel->callsign)         .','
                                 .escape(isset($this->rectype) ? $this->rectype : 0)                   .','
                                 .'11'                                     .','
-                                .'1'                                      .')')
+                                .'1'                                      .','
+                                .'0'                                      .')')
             or trigger_error('SQL Error: '.$db->error, FATAL);
         $sh->finish();
     // Notify the backend of the changes
@@ -706,7 +710,7 @@ class Program extends MythBase {
                        SET oldrecorded.reactivate = 1
                      WHERE oldrecorded.starttime  = ?
                        AND oldrecorded.chanid     = ?',
-                    $this->starttime,
+                    unix2mythtime($this->starttime),
                     $this->chanid
                   );
         $this->rec_override(rectype_override);
@@ -779,40 +783,22 @@ class Program extends MythBase {
 
     public function getAspect() {
         global $db;
-        $sh = $db->query('SELECT recordedmarkup.type,
-                                 recordedmarkup.data
-                            FROM recordedmarkup
-                           WHERE recordedmarkup.chanid    = ?
-                             AND recordedmarkup.starttime = FROM_UNIXTIME(?)
-                             AND recordedmarkup.type      IN (10, 11, 12, 13, 14)
-                        GROUP BY recordedmarkup.type
-                        ORDER BY SUM((SELECT IFNULL(rm.mark, recordedmarkup.mark)
-                                        FROM recordedmarkup AS rm
-                                       WHERE rm.chanid = recordedmarkup.chanid
-                                         AND rm.starttime = recordedmarkup.starttime
-                                         AND rm.type IN (10, 11, 12, 13, 14)
-                                         AND rm.mark > recordedmarkup.mark
-                                ORDER BY rm.mark ASC LIMIT 1)- recordedmarkup.mark) DESC
-                           LIMIT 1',
-                           $this->chanid,
-                           $this->recstartts
+        $sh = $db->query('SELECT aspect
+                            FROM recordedfile
+                           WHERE recordedid = ?',
+                           $this->recordedid
                            );
         $row = $sh->fetch_assoc();
         $sh->finish();
 
-        switch($row['type']) {
-            case 10:
-                return 1;
-            case 11:
-                return 4/3;
-            case 12:
-                return 16/9;
-            case 13:
-                return 2.21/1;
-            case 14:
-                return $row['data']/1000000.0;
-            default:
-                return 4/3;
+        if (($row['aspect'] > 1.777777) && ($row['aspect'] < 1.777779)) {
+            // avoid low precision 16:9 to avoid 320x179 thumbnails
+            return 16/9;
+        } elseif ($row['aspect'] > 1) {
+            return $row['aspect'];
+        } else {
+            // default 4:3
+            return 4/3;
         }
     }
 }

@@ -97,19 +97,32 @@
             trigger_error("load_all_program_data() attempted with out any channels", FATAL);
         $these_channels = implode(',', $these_channels);
     // Build the sql query, and execute it
-        $query = 'SELECT program.*,
+    // The weird stuff with pr1 and pr2 is to eliminate the mutiple ratings
+    // per program which causes duplicates to be found.
+    // This code selects the "rater" with the highest name alphabetically,
+    // so for example where raters available for a program are CHVRS ClassInd and VCHIP,
+    // it selects VCHIP.
+        $query = 'SELECT DISTINCT program.*,
                          UNIX_TIMESTAMP(program.starttime) AS starttime_unix,
                          UNIX_TIMESTAMP(program.endtime) AS endtime_unix,
-                         IFNULL(programrating.system, "") AS rater,
-                         IFNULL(programrating.rating, "") AS rating,
+                         IFNULL(pr1.system, "") AS rater,
+                         IFNULL(pr1.rating, "") AS rating,
                          channel.callsign,
                          channel.channum
                   FROM program USE INDEX (id_start_end)
-                       LEFT JOIN programrating USING (chanid, starttime)
-                       LEFT JOIN channel ON program.chanid = channel.chanid
-                       LEFT JOIN credits ON (program.chanid = credits.chanid AND program.starttime = credits.starttime)
-                       LEFT JOIN people ON (credits.person = people.person)
-                 WHERE';
+                        LEFT JOIN programrating pr1
+                            on program.chanid = pr1.chanid
+                               and program.starttime = pr1.starttime
+                        LEFT OUTER JOIN programrating pr2
+                            on program.chanid = pr2.chanid
+                               and program.starttime = pr2.starttime
+                               and pr2.system > pr1.system
+                        LEFT JOIN channel on channel.chanid = program.chanid
+                        LEFT JOIN credits
+                            on program.chanid = credits.chanid
+                               and program.starttime = credits.starttime
+                       LEFT JOIN people USING (person)
+                 WHERE pr2.system is null and ';
     // Only loading a single channel worth of information
         if ($chanid > 0)
             $query .= ' program.chanid='.$db->escape($chanid);
@@ -128,10 +141,11 @@
         if ($extra_query)
             $query .= ' AND '.$extra_query;
     // Group and sort
-        if (!$distinctTitle)
-            $query .= "\nGROUP BY channel.callsign, program.chanid, program.starttime";
-        else
-            $query .= "\nGROUP BY program.title";
+    // FIXME reenable with e.g. ANY_VALUE or rewrite to use the Service API
+    //  if (!$distinctTitle)
+    //      $query .= "\nGROUP BY channel.callsign, program.chanid, program.starttime";
+    //  else
+    //      $query .= "\nGROUP BY program.title";
         $query .= " ORDER BY program.starttime";
     // Limit
         if ($single_program)
