@@ -182,8 +182,17 @@ EOM;
         } else { ?>
     <td class="x-channum" rowspan="2"><?php echo $show->channel->channum, ' - ', $show->channel->name ?></td><?php
         }
-    if ($recgroup_cols)
-        echo "    <td class=\"-recgroup\">$show->recgroup</td>\n";
+    if ($recgroup_cols && count($Groups) > 2) {
+        echo '<td class="x-recgroup"><select id="recgroup-'.($row+$offset).'" onchange="javascript:change_recgroup('.($row+$offset).')">';
+        foreach($Groups as $recgroup => $count) {
+            #if ($recgroup == "Deleted") continue;
+            echo '<option id="'.htmlspecialchars($recgroup).'" value="'.htmlspecialchars($recgroup).'"';
+            if ($show->recgroup == $recgroup)
+                echo ' SELECTED';
+            echo '>'.html_entities($recgroup).'</option>';
+        }
+        echo "</select></td>\n";
+    }
 ?>
     <td class="x-length"><?php echo nice_length($show->length) ?></td>
     <td class="x-filesize"><?php echo nice_filesize($show->filesize) ?></td>
@@ -325,6 +334,24 @@ EOM;
     }
 ?>
 
+// Change the recording group
+    function change_recgroup(id) {
+        var file = files[id];
+        var sel = document.getElementById("recgroup-"+id);
+        var newGroup = sel.options[sel.selectedIndex].value;
+        var r = new Ajax.Request('<?php echo root_url ?>tv/detail/' + file.chanid + '/' + file.starttime,
+                                 {
+                                    parameters: 'set_recgroup='+newGroup,
+                                  asynchronous: false
+                                 });
+        if (r.transport.responseText == 'success') {
+        // Update to the new value
+            file.recgroup = newGroup;
+        }
+        else if (r.transport.responseText) {
+            alert('Error: '+r.transport.responseText);
+        }
+    }
 // Set the autoexpire flag
     function set_autoexpire(id) {
         var file = files[id];
